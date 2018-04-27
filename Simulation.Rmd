@@ -1,0 +1,328 @@
+---
+title: "Final"
+author: "Kevin Deng"
+date: "December 10, 2017"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Drugs
+1. Among the capacity levels of 30K, 35K, 40K, 45K, 50K, 55K, and 60K units, which level maximize expected profit?
+```{r}
+rm(list=ls())
+set.seed(1234)
+# Build a model to calculate profit
+profit_model <- function(cap){
+  profit = 0
+  for (i in 1:10){
+    x = round(rnorm(n = 1, mean = 50000, sd = 12000))
+    if (i == 1){
+      if (x >= cap){
+      cost <- 16 * cap + 0.2 * cap + 0.4 * cap
+      profit <- 3.7 * cap - cost
+      }
+      else{
+      cost <- 16 * cap + 0.2 * x + 0.4 * cap
+      profit <- 3.7 * x - cost
+      }
+    }
+    else{
+      if (x >= cap){
+      cost <- 0.2 * cap + 0.4 * cap
+      profit <- profit + 3.7 * cap - cost
+      }
+      else{
+      cost <- 0.2 * x + 0.4 * cap
+      profit <- profit + 3.7 * x - cost
+      }
+    }
+  }
+  return(profit)
+}
+
+Mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+# Run a loop to see the average profit for each level of capacity
+profit1 <- rep(0, 1000)
+profit2 <- rep(0, 1000)
+profit3 <- rep(0, 1000)
+profit4 <- rep(0, 1000)
+profit5 <- rep(0, 1000)
+profit6 <- rep(0, 1000)
+profit7 <- rep(0, 1000)
+for (i in 1:1000){
+  # Capacity of 30K
+  capacity <- 30000
+  profit1[i] <- profit_model(capacity)
+  # Capacity of 35K
+  capacity <- 35000
+  profit2[i] <- profit_model(capacity)
+  # Capacity of 40K
+  capacity <- 40000
+  profit3[i] <- profit_model(capacity)
+  # Capacity of 45K
+  capacity <- 45000
+  profit4[i] <- profit_model(capacity)
+  # Capacity of 50K
+  capacity <- 50000
+  profit5[i] <- profit_model(capacity)
+  # Capacity of 55K
+  capacity <- 55000
+  profit6[i] <- profit_model(capacity)
+  # Capacity of 60K
+  capacity <- 60000
+  profit7[i] <- profit_model(capacity)
+}
+Mode(profit1)
+Mode(profit2)
+Mode(profit3)
+Mode(profit4)
+Mode(profit5)
+Mode(profit6)
+Mode(profit7)
+maximized = 50000
+capacities <- c(30000, 35000, 40000, 45000, 50000, 55000, 60000)
+expprofit <- c(Mode(profit1), Mode(profit2), Mode(profit3), Mode(profit4), Mode(profit5), Mode(profit6), Mode(profit7))
+plot(capacities, expprofit, abline(v = maximized, lty = 2))
+
+```
+After running my model for 1000 times, the level of 50K units per year is the level maximizing expected profit.
+
+2. Using the capacity from previous question, NuFeel can be 95% certain that expected profit for the 10-year period will be between what two values?
+```{r}
+# Buile a confidence interval function
+confi_interval <- function(x, level){
+  if (level == 0.99){
+    interval <- c((mean(x)-2.58*(sd(x))),(mean(x)+2.58*(sd(x))))
+    }
+  if (level == 0.95){
+    interval <- c((mean(x)-1.96*(sd(x))),(mean(x)+1.96*(sd(x))))
+    }
+  if (level == 0.90){
+    interval <- c((mean(x)-1.65*(sd(x))),(mean(x)+1.965*(sd(x))))
+    }
+  return(interval)
+}
+interval <- confi_interval(profit5, 0.95)
+sprintf('Thus, the two values will be [%s, %s]', interval[1], interval[2])
+```
+
+## Warranty
+
+```{r}
+rm(list = ls())
+set.seed(1234)
+# Build three empty vectors
+totalFailures <- rep(0, 1000)
+totalCost <- rep(0, 1000)
+totalDevices <- rep(0, 1000)
+for (k in 1:1000){
+  x <- c(1:6)
+  y <- pgamma(x, 2, rate = 2)
+  # set broken[1] = 0, so it would not the warranty year at first in line 135
+  broken <- rep(0,7)
+  # As I bought 1 device at first, so I need to set my cost to 100
+  cost <- 100
+  warranty <- rep(0, 6)
+  count <- 1
+  for (i in 1:length(x)){
+    if (x[i] <= 1 + broken[i] * x[i]){
+      broken[i+1] <- rbinom(1, 1, y[count])
+      if (broken[i+1] == 1){
+        warranty[i] <- 1
+        count = 1
+      }
+      else{
+        count = count + 1
+      }
+    }
+    else{
+      broken[i+1] <- rbinom(1, 1, y[count])
+      cost <- cost + 100*broken[i+1]
+      count <- count + 1
+    }
+  }
+  totalFailures[k] <- sum(warranty)
+  totalCost[k] <- cost
+  totalDevices[k] <- sum(broken) + 1
+}
+par(mfrow = c(3,1))
+hist(totalCost, breaks = 100); hist(totalFailures, breaks = 100); hist(totalDevices, breaks = 100)
+par(mfrow = c(1,1))
+mean(totalCost)
+mean(totalFailures)
+mean(totalDevices)
+
+```
+3.
+After I ran 1000 times of my model, the total cost is $226.2
+
+4. 
+After I ran 1000 times of my model, the number of failures during the warranty period is 3.124
+
+5. 
+After I ran 1000 times of my model, the number of devices owned is 5.386
+
+## Clearance
+6. How many days will it take for WTF to sell all 12 washers?
+```{r}
+rm(list=ls())
+# set seed to make sure my outcome doesn't change every time the model was run
+set.seed(1234)
+customers <- c(0, 1, 2, 3, 4)
+prob1 <- c(0.15, 0.25, 0.30, 0.20, 0.10)
+# Build a discrete distribution model
+drnd <- function(x, p, n) {
+    z <- NULL
+    ps <- cumsum(p)
+    r <- runif(n)
+    for (i in 1:n){
+      z <- c(z, x[which(r[i] <= ps)[1]])
+    }
+    return(z)
+}
+
+# Build the Mode function to find the most frequent value in a list
+Mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+prob2 <- c(0.4, 0.25, 0.35)
+days <- rep(0, 1000)
+for (k in 1:1000){
+  washers <- c(0, 0, 0)
+  for (day in 1:100){
+    # Use the model to get the number of cusomers arriving every day
+    out <- drnd(customers, prob1, 1)
+    # Calculate the number of customers who are interested in sale-priced items
+    intersted_customers <- rbinom(1, out, 0.6)
+    for (i in 1:intersted_customers){
+    ps <- cumsum(prob2)
+    r <- runif(1)
+      for (j in 1:3){
+        if (r <= ps[j]){
+          washers[j] = washers[j] + 1
+          break
+        }
+      }
+    }
+  # To prevent WTF from selling more than 5
+    if (washers[1] >= 5){
+      washers[1] = 5
+    }
+    if (washers[2] >= 3){
+      washers[2] = 3
+    }
+    if (washers[3] >= 4){
+      washers[3] = 4
+    }
+    # When all three machines were sold out
+    if (washers[1] >= 5 && washers[2] >= 3 && washers[3] >= 4){
+      break
+    }
+  }
+  days[k] <- day
+}
+Mode(days)
+hist(days, breaks = 100, xlim=range(5:25))
+```
+After running my model for 1000 times, I found that it takes 9 days to sell all the washers.
+
+## Waiting Room
+7. Compute the sample mean and standard deviation for this data.
+```{r}
+rm(list=ls())
+completiontime <- c(8, 12, 26, 10, 23, 21, 16, 22, 18, 17, 36, 9)
+mean(completiontime)
+sd(completiontime)
+```
+Thus, the sample mean is 18.16667 and the sample standard deviation is 8.110973
+
+8. Construct a 99% confidence interval for the population mean interview time.
+```{r}
+confi_interval <- function(x, level, n){
+  if (level == 0.99){
+    interval <- c((mean(x)-2.58*(sd(x)/(n^0.5))),(mean(x)+2.58*(sd(x)/(n^0.5))))
+    }
+  if (level == 0.95){
+    interval <- c((mean(x)-1.96*(sd(x)/(n^0.5))),(mean(x)+1.96*(sd(x)/(n^0.5))))
+    }
+  if (level == 0.90){
+    interval <- c((mean(x)-1.65*(sd(x)/(n^0.5))),(mean(x)+1.65*(sd(x)/(n^0.5))))
+    }
+  return(interval)
+}
+
+confi_interval(completiontime, 0.99, 12)
+```
+So a 99% confidence interval would be [12,12576, 24.20757]
+
+9. How large a sample is required to obtain a 99% confidence interval whose accuracy is within +/- 8 minutes?
+```{r}
+N = 2.58^2*sd(completiontime)^2/(8^2)
+round(N)
+```
+So the sample should be 7.
+
+## Scenarios
+10. Making a forecast about future to gather useful insights based on every scenario might sounds awesome. However, if we only consider some scenarios instead of every scenario to make a forecast, we would have following advantages:
+  1. Preventing our forecasting model from being overfitting. As we add more and more variables to our model, our model might have more chances to become overfitting.
+  2. Reducing the cost of collecting information.
+  3. Saving a lot of time of collecting information and building forecast model.
+  
+## Multiple Choice
+11. c
+
+12. a
+
+13. b
+
+14. c
+
+15. c
+
+16. d
+
+17. d
+
+## Short Answer in R
+18. 
+```{r}
+pnorm(q = 460, mean = 480, sd = 10, lower.tail = T)
+```
+The probability that any container is under 460 grams would be 2.275%
+
+19. 
+Y = X1 + X2
+```{r}
+Ex = 460 + 460
+SD = (100 + 100 + 2*10*10*0.77)^0.5
+Ex
+SD
+```
+
+The expected total weight is 920
+The standard deviation is 18.81489
+
+20.
+```{r}
+pnorm(q = 920, mean = 920, sd = SD, lower.tail = T)
+```
+The probability that a total weight of a duo-pack is under 920 grams is 50%
+
+21.
+```{r}
+x = 460 + 1.96*(10)
+x
+```
+It should be 479.6 grams.
+
